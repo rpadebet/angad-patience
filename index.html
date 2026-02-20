@@ -82,31 +82,76 @@ body.admin-mode #tile-count-badge{display:block;}
 /* GRID */
 #needs-grid{
   flex:1;display:grid;grid-template-columns:1fr 1fr;
-  grid-auto-rows:1fr;gap:11px;min-height:0;
-  overflow-y:auto;scrollbar-width:none;align-content:start;
+  gap:11px;min-height:0;
+  overflow-y:auto;scrollbar-width:none;
+  /* Let tiles define their own height via aspect-ratio */
+  align-content:start;
+  padding-bottom:4px;
 }
 #needs-grid::-webkit-scrollbar{display:none;}
 
 /* TILE */
 .need-tile{
   border-radius:var(--rbig);overflow:hidden;cursor:pointer;
-  position:relative;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
+  position:relative;
   border:3px solid var(--tc,#3B3B60);
   background:var(--tb,#1A1A38);
-  box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 14px var(--tg,rgba(255,107,107,.3)),inset 0 1px 0 rgba(255,255,255,.08);
+  box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 18px var(--tg,rgba(255,107,107,.3)),inset 0 1px 0 rgba(255,255,255,.08);
   transition:transform .15s cubic-bezier(.34,1.4,.64,1),box-shadow .15s,filter .3s;
-  min-height:100px;
+  /* Enforce square-ish aspect ratio so tiles are tall enough */
+  aspect-ratio:1/1;
 }
-.need-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:var(--tc);border-radius:var(--rbig) var(--rbig) 0 0;opacity:.9;}
-.need-tile::after{content:'';position:absolute;inset:-3px;border-radius:calc(var(--rbig)+3px);box-shadow:0 0 20px var(--tg);opacity:.5;transition:opacity .2s;pointer-events:none;}
-.need-tile:hover::after{opacity:.9;}
+.need-tile::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:6px;
+  background:var(--tc);border-radius:var(--rbig) var(--rbig) 0 0;opacity:.9;z-index:3;
+}
+.need-tile::after{
+  content:'';position:absolute;inset:-3px;border-radius:calc(var(--rbig)+3px);
+  box-shadow:0 0 24px var(--tg);opacity:.55;transition:opacity .2s;pointer-events:none;
+}
+.need-tile:hover::after{opacity:.95;}
 .need-tile:not(.cooling):active{transform:scale(.91);}
 
-.tile-photo{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;opacity:.35;border-radius:calc(var(--rbig) - 3px);}
-.tile-icon{font-size:clamp(30px,7vw,46px);line-height:1;position:relative;z-index:1;filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));transition:transform .15s;}
-.need-tile:active .tile-icon{transform:scale(1.12);}
-.tile-label{font-family:'Fredoka One',cursive;font-size:clamp(12px,3vw,17px);color:var(--white);text-align:center;position:relative;z-index:1;margin-top:5px;padding:0 8px;line-height:1.2;text-shadow:0 2px 10px rgba(0,0,0,.8);}
+/* PHOTO — fills entire tile */
+.tile-photo{
+  position:absolute;inset:0;object-fit:cover;width:100%;height:100%;
+  opacity:1;border-radius:calc(var(--rbig) - 3px);z-index:0;
+}
+/* Dark scrim over photo so label stays readable */
+.tile-photo-scrim{
+  position:absolute;inset:0;z-index:1;border-radius:calc(var(--rbig) - 3px);
+  background:linear-gradient(to bottom, rgba(0,0,0,.08) 0%, rgba(0,0,0,.0) 40%, rgba(0,0,0,.65) 100%);
+}
+
+/* EMOJI — centred, fills ~55% of tile height */
+.tile-icon{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%, -58%); /* slightly above centre to leave room for label */
+  font-size:clamp(44px, 12vw, 72px);
+  line-height:1;
+  z-index:2;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,.6));
+  transition:transform .15s;
+  pointer-events:none;
+}
+.need-tile:active .tile-icon{transform:translate(-50%,-58%) scale(1.1);}
+
+/* LABEL — pinned to bottom, full width, gradient backing */
+.tile-label{
+  position:absolute;bottom:0;left:0;right:0;
+  font-family:'Fredoka One',cursive;
+  font-size:clamp(14px, 3.8vw, 20px);
+  color:var(--white);text-align:center;
+  z-index:2;
+  padding:18px 8px 10px;
+  /* gradient backing so text pops over any photo */
+  background:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.72) 50%, rgba(0,0,0,.82) 100%);
+  border-radius:0 0 calc(var(--rbig) - 3px) calc(var(--rbig) - 3px);
+  line-height:1.2;
+  text-shadow:0 2px 8px rgba(0,0,0,.9);
+  pointer-events:none;
+}
 
 /* UPLOAD OVERLAY */
 .tile-upload-overlay{
@@ -134,7 +179,8 @@ body.admin-mode .tile-delete{display:flex;}
   border-radius:var(--rbig);border:3px dashed rgba(255,255,255,.16);
   background:rgba(255,255,255,.04);
   display:none;flex-direction:column;align-items:center;justify-content:center;
-  gap:8px;cursor:pointer;min-height:100px;
+  gap:8px;cursor:pointer;
+  aspect-ratio:1/1;
   transition:background .18s,border-color .18s;
 }
 #add-tile-card:active{background:rgba(255,255,255,.09);border-color:#60A5FA;}
@@ -409,6 +455,8 @@ function buildTileEl(tile,idx){
     const img=document.createElement('img');
     img.className='tile-photo';img.src=tile.photo;img.alt='';
     div.appendChild(img);
+    // scrim over photo for label readability
+    const scrim=document.createElement('div');scrim.className='tile-photo-scrim';div.appendChild(scrim);
   }
 
   // Upload overlay (edit mode)
